@@ -1,0 +1,80 @@
+worker_processes  1;
+
+events {
+    worker_connections  1024;
+}
+
+
+http {
+    resolver {{.ResolverAddress}};
+    include       mime.types;
+    default_type  application/octet-stream;
+
+    sendfile        on;
+
+    keepalive_timeout  65;
+
+    #gzip  on;
+
+    server {
+        listen       5000;
+        server_name  localhost;
+
+        #charset koi8-r;
+
+        #access_log  logs/host.access.log  main;
+
+        location / {
+          access_by_lua '
+              local cjson = require "cjson"
+
+              local opts = {
+                 redirect_uri_path = "/redirect_uri",
+                 discovery = "http://localhost:8080/openid-connect-server-webapp/.well-known/openid-configuration",
+                 client_id = "{{.ClientID}}",
+                 client_secret = "{{.ClientSecret}}",
+                 scope = "openid email profile"
+              }
+
+              -- call authenticate for OpenID Connect user authentication
+              local res, err = require("resty.openidc").authenticate(opts)
+
+              if err then
+                ngx.status = 500
+                ngx.say(err)
+                ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+              end
+
+              -- at this point res is a Lua table with 3 keys:
+              --   id_token    : a Lua table with the claims from the id_token (required)
+              --   access_token: the access token (optional)
+              --   user        : a Lua table with the claims returned from the user info endpoint (optional)
+
+              --if res.id_token.hd ~= "pingidentity.com" then
+              --  ngx.exit(ngx.HTTP_FORBIDDEN)
+              --end
+
+              --if res.user.email ~= "hzandbelt@pingidentity.com" then
+              --  ngx.exit(ngx.HTTP_FORBIDDEN)
+              --end
+
+              -- set headers with user info (overwriting any existing!)
+              ngx.req.set_header("X-USER", cjson.encode(res.user))
+          ';
+
+          proxy_pass   http://127.0.0.1:3001;
+        }
+
+
+        # redirect server error pages to the static page /50x.html
+        #
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   html;
+        }
+
+    }
+
+
+
+}
