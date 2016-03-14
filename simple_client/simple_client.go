@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo"
+	"github.com/labstack/echo/engine/standard"
 	"github.com/labstack/echo/middleware"
 	"golang.org/x/oauth2"
 )
@@ -31,11 +32,11 @@ func main() {
 	e.Use(middleware.Logger())
 	e.Get("/", IndexHandler(session))
 	e.Get("/redirect", RedirectHandler(session))
-	e.Run(":3333")
+	e.Run(standard.New(":3333"))
 }
 
 func IndexHandler(session *Session) echo.HandlerFunc {
-	return func(c *echo.Context) error {
+	return func(c echo.Context) error {
 		if session.Token == nil {
 			url := session.Config.AuthCodeURL("state", oauth2.AccessTypeOnline)
 			return c.Redirect(http.StatusTemporaryRedirect, url)
@@ -52,7 +53,7 @@ func IndexHandler(session *Session) echo.HandlerFunc {
 }
 
 func RedirectHandler(session *Session) echo.HandlerFunc {
-	return func(c *echo.Context) error {
+	return func(c echo.Context) error {
 		code := c.Query("code")
 		tok, err := session.Config.Exchange(oauth2.NoContext, code)
 		if err != nil {
