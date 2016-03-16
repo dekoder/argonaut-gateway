@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"io"
 	"net/http"
 
@@ -16,12 +17,16 @@ type Session struct {
 }
 
 func main() {
+	clientId := flag.String("id", "", "the Client ID for this OAuth2 Client")
+	clientSecret := flag.String("secret", "", "the Client secret for this OAuth2 Client")
+	flag.Parse()
+
 	e := echo.New()
 
 	session := &Session{}
 	session.Config = &oauth2.Config{
-		ClientID:     "8851a4c7-e431-46f9-a818-d1f3936dbe28",
-		ClientSecret: "NmyZgvGbSIgvRG4FsmD6fPXb6StnKS80kvNyywLNBO1ze2VF-bVjy_Edri1tu4bsHQ25YWgf4tOHEsLJU_o2xA",
+		ClientID:     *clientId,
+		ClientSecret: *clientSecret,
 		Scopes:       []string{"user/Observation.read", "user/Patient.read"},
 		Endpoint: oauth2.Endpoint{
 			AuthURL:  "http://localhost:8080/openid-connect-server-webapp/authorize",
