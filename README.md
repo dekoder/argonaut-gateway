@@ -58,7 +58,84 @@ In this system, the Argonaut Gateway is an instance of [nginx](http://nginx.org/
 set up with [lua-resty-openidc](https://github.com/pingidentity/lua-resty-openidc). This
 allows the nginx instance to operate as an OpenID Connect Relying party.
 
-The OpenID Connect based identity provder being used is [MITREid Connect](https://github.com/mitreid-connect).
+The OpenID Connect based identity provider being used is [MITREid Connect](https://github.com/mitreid-connect).
+
+## Protected Applications
+
+In this architecture, applications that are protected by the API Gateway will
+only receive authenticated requests. That means that the request is originating
+from a user in a web browser who has logged in at the MITREid Connect acting as
+an OpenID Connect IdP or it is coming from an application which has been
+delegated access, with the MITREid Connect server acting as an OAuth 2
+authorization server.
+
+### Allowing users access to protected applications using OpenID Connect
+
+Protected applications will receive proxied requests through the gateway. This
+is achieved using nginx [proxy_pass](http://nginx.org/en/docs/http/ngx_http_proxy_module.html)
+directive. When users make their first request to the gateway, they will be
+redirected to the OpenID Connect Identity Provider to log in. Upon successful
+log in, they will be redirected back to the gateway with additional information
+to allow the gateway to establish identity, per the standard OpenID Connect
+[Authentication using the Hybrid Flow](http://openid.net/specs/openid-connect-core-1_0.html#HybridFlowAuth).
+
+The gateway will then obtain information about the user by accessing the
+[UserInfo](http://openid.net/specs/openid-connect-core-1_0.html#UserInfo) of the
+OpenID Connect Identity Provider. The claims returned by the provider will be
+placed, in JSON format, into an `X-USER` header to all requests sent to the
+protected application.
+
+It is the responsibility of the protected application to determine what data and
+actions should be allowed for this user based on the provided claims data.
+
+### Allowing users access to protected applications using OAuth 2
+
+Applications protected by the gateway for delegated access by OAuth 2 work in a
+similar fashion to those allowing access via OpenID Connect. It is also possible,
+and probably common, to allow access to an application using both.
+
+For the case of delegated access using OAuth 2, we assume that a user wants to
+allow a client to access data in a protected application. We also assume that
+the user has an account at the OpenID Connect Identity Provider. To start the
+process of a client accessing data using OAuth 2, the client should direct the
+user to the OpenID Connect Identity Provider to obtain an access token. This
+follows the standard OAuth 2 [Authorization Code Grant Flow](http://tools.ietf.org/html/rfc6749#section-4.1).
+
+When the client has obtained an access token, it will make a request to the
+protected application through the gateway with the access token. The gateway
+will then check the validity of the access token through
+[Token Introspection](https://tools.ietf.org/html/rfc7662) at the OpenID Connect
+Identity Provider. If the token is valid, the Identity Provider will supply the
+gateway with information about the delegated application.
+
+Specifically, protected applications can look for two HTTP headers for requests
+that have been delegated using OAuth 2:
+
+* The `X-DELEGATED` header will be set to `true`
+* The `X-SCOPE` header will contain scopes that have been grated to this client.
+It is expected that these scopes will conform to [SMART on FHIR Access Scopes](http://docs.smarthealthit.org/authorization/scopes-and-launch-context/).
+
+As with OpenID Connect, protected applications are responsible for handling the
+information provided in the HTTP headers to make decisions about what actions
+the client can perform.
+
+## Installation
+
+### Ubuntu
+
+[Step-by-step Guide](https://github.com/mitre/argonaut-gateway/blob/master/install-ubuntu.md)
+
+### Mac OS X
+
+We have created [Homebrew](http://brew.sh/) formula to set up the API Gateway
+and MITREid Connect servers. You can do so with the following commands, assuming
+you have Homebrew installed:
+
+```
+brew tap mitre/oidc
+brew install ngx_openresty
+brew install openid-connect-java-spring-server
+```
 
 ## License
 
