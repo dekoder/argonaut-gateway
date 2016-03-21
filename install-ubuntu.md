@@ -150,4 +150,47 @@ using its API.
 
 ### (Optional) Run the registration application
 
-The following commands will set up the registration application.
+The registration application will be cloned from a GitHub repository. It is
+written in [Go](https://golang.org/) so that must be installed as well. The
+following commands will set everything up:
+
+```
+$ sudo apt-get git
+$ sudo add-apt-repository ppa:ubuntu-lxc/lxd-stable
+$ sudo apt-get update
+$ sudo apt-get install golang
+```
+
+Go needs a place to store any downloaded libraries. Assuming you are in your
+account's home directory, the following commands will set up what Go needs:
+
+```
+$ mkdir go
+$ export GOPATH=~/go
+```
+
+Now, we can clone and run the registration application:
+
+```
+$ git clone https://github.com/mitre/argonaut-gateway.git
+$ cd argonaut-gateway/register_nginx
+$ go get
+$ go run register.go
+```
+
+The `go get` command will download all of the necessary dependencies for the
+registration application to run. This application must be run from session where
+a browser can be launched. To access the MITREid Connect API, the registration
+application itself must register as an OAuth 2 client and to do so, must
+initiate a browser session to have the user approve the client.
+
+Once the registration application has finished, it will generate an `nginx.conf`
+file in the current directory. This file will have the proper configuration to
+act as an OIDC RP and OAuth RS. It assumes that it is protecting an application
+running on http://localhost:3001. To run nginx with this configuration, you can
+do the following:
+
+```
+$ sudo cp sudo cp nginx.conf /usr/local/openresty/nginx/conf/
+$ sudo /usr/local/openresty/nginx/sbin/nginx
+```
