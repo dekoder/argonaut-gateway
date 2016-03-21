@@ -175,8 +175,11 @@ Now, we can clone and run the registration application:
 $ git clone https://github.com/mitre/argonaut-gateway.git
 $ cd argonaut-gateway/register_nginx
 $ go get
-$ go run register.go
+$ go run register.go -resolver IP_OF_YOUR_DNS_SERVER
 ```
+
+Replace IP_OF_YOUR_DNS_SERVER with your DNS Server's IP. This will be written
+into the nginx config file to help it resolve hosts.
 
 The `go get` command will download all of the necessary dependencies for the
 registration application to run. This application must be run from session where
@@ -194,3 +197,28 @@ do the following:
 $ sudo cp sudo cp nginx.conf /usr/local/openresty/nginx/conf/
 $ sudo /usr/local/openresty/nginx/sbin/nginx
 ```
+
+### (Optional) Run a FHIR Server protected by the gateway
+
+The following set of instructions will get a FHIR server up and running behind
+the API Gateway. First install [MongoDB](https://docs.mongodb.org/manual/tutorial/install-mongodb-on-ubuntu/):
+
+```
+$ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927
+$ echo "deb http://repo.mongodb.org/apt/ubuntu trusty/mongodb-org/3.2 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.2.list
+$ sudo apt-get update
+$ sudo apt-get install -y mongodb-org
+$ sudo service mongod start
+```
+
+Get and run the FHIR server:
+
+```
+$ go get github.com/intervention-engine/fhir
+$ cd go/src/github.com/intervention-engine/fhir/
+$ go run server.go
+```
+
+You should now be able to visit http://localhost:5000/Patient. This will
+authenticate you through OpenID Connect and then show you a FHIR Bundle, which
+will be empty because there are no patients in the database.
